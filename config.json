@@ -1,0 +1,178 @@
+{"malaysia":{
+    "country": "malaysia",
+    "run_tag": "01021449",
+    "description": "Monthly precipitation calculation with administrative boundaries",
+
+    "parameters": {
+        "lat_range": [0.5, 7.5],
+        "lon_range": [99.5, 120.5],
+        "grid_size": 0.5,
+        "min_valid_months": 90,
+        "max_missing_ratio": 0.3
+    },
+
+    "processing_options": {
+        "handle_negatives": "zero",
+        "handle_high_values": "nan",
+        "apply_interpolation": true,
+        "completeness_threshold": 0.8
+    },
+
+    "io_config": {
+        "output_format": "csv"
+    },
+     "state_coordinates": {
+        "Selangor": {
+            "lat": 3.07,
+            "lon": 101.52,
+            "center_type": "administrative_center",
+            "description": "Most populous state with Kuala Lumpur federal territory"
+        },
+        "Perlis": {
+            "lat": 6.44,
+            "lon": 100.20,
+            "center_type": "state_center",
+            "description": "Smallest state in Malaysia, northernmost state"
+        },
+        "Kedah": {
+            "lat": 6.12,
+            "lon": 100.37,
+            "center_type": "state_center",
+            "description": "Rice bowl of Malaysia"
+        },
+        "Kelantan": {
+            "lat": 5.95,
+            "lon": 102.04,
+            "center_type": "state_center",
+            "description": "Northeastern state, traditional Malay culture"
+        },
+        "Terengganu": {
+            "lat": 5.31,
+            "lon": 103.13,
+            "center_type": "state_center",
+            "description": "East coast state, oil and gas industry"
+        },
+        "Pahang": {
+            "lat": 3.81,
+            "lon": 103.33,
+            "center_type": "state_center",
+            "description": "Largest state in Peninsular Malaysia"
+        },
+        "Perak": {
+            "lat": 4.59,
+            "lon": 101.08,
+            "center_type": "state_center",
+            "description": "Second largest state, rich in tin history"
+        },
+        "Penang": {
+            "lat": 5.41,
+            "lon": 100.33,
+            "center_type": "island_state",
+            "description": "Island state, major port and industrial hub"
+        },
+        "Johor": {
+            "lat": 1.48,
+            "lon": 103.74,
+            "center_type": "state_center",
+            "description": "Southernmost state, connected to Singapore"
+        },
+        "Malacca": {
+            "lat": 2.19,
+            "lon": 102.25,
+            "center_type": "historical_center",
+            "description": "Historical state, UNESCO World Heritage site"
+        },
+        "Negeri Sembilan": {
+            "lat": 2.73,
+            "lon": 101.94,
+            "center_type": "state_center",
+            "description": "West coast state, traditional Minangkabau culture"
+        },
+        "Langkawi": {
+            "lat": 6.35,
+            "lon": 99.85,
+            "center_type": "island_archipelago",
+            "description": "Archipelago, tourist destination in Kedah"
+        },
+        "Sabah": {
+            "lat": 5.98,
+            "lon": 116.07,
+            "center_type": "state_center",
+            "description": "East Malaysian state, Borneo island"
+        },
+        "Sarawak": {
+            "lat": 2.50,
+            "lon": 113.27,
+            "center_type": "state_center",
+            "description": "Largest state in Malaysia, Borneo island"
+        },
+        "Labuan": {
+            "lat": 5.28,
+            "lon": 115.23,
+            "center_type": "federal_territory",
+            "description": "Federal territory, offshore financial center"
+        },
+        "Putrajaya": {
+            "lat": 2.94,
+            "lon": 101.70,
+            "center_type": "federal_territory",
+            "description": "Administrative capital of Malaysia"
+        },
+        "Kuala Lumpur": {
+            "lat": 3.14,
+            "lon": 101.69,
+            "center_type": "federal_territory",
+            "description": "National capital, commercial hub"
+        }
+    },
+
+    "region_grouping": {
+        "peninsular_malaysia": [
+            "Selangor", "Perlis", "Kedah", "Kelantan", "Terengganu",
+            "Pahang", "Perak", "Penang", "Johor", "Malacca",
+            "Negeri Sembilan", "Langkawi"
+        ],
+        "east_malaysia": ["Sabah", "Sarawak"],
+        "federal_territories": ["Kuala Lumpur", "Putrajaya", "Labuan"]
+    },
+
+    "coordinate_system": {
+        "datum": "WGS84",
+        "projection": "EPSG:4326",
+        "units": "decimal_degrees",
+        "accuracy": "state_centroid_approximate",
+        "source": "estimated_geographic_center",
+        "notes": "Coordinates represent approximate state centers, not precise boundaries"
+    },
+
+    "agricultural_regions": {
+        "rice_bowl": ["Kedah", "Perlis"],
+        "oil_palm_belt": ["Johor", "Pahang", "Sabah", "Sarawak"],
+        "rubber_zone": ["Kelantan", "Terengganu"],
+        "fruit_basket": ["Penang", "Selangor"]
+    }
+},
+    "china":{
+    "country": "china",
+    "run_tag": "01021530",
+    "description": "Monthly precipitation calculation with administrative boundaries",
+
+    "parameters": {
+        "lat_range": [18, 27],
+        "lon_range": [104, 113],
+        "grid_size": 0.5,
+        "min_valid_months": 90,
+        "max_missing_ratio": 0.3
+    },
+
+    "processing_options": {
+        "handle_negatives": "zero",
+        "handle_high_values": "nan",
+        "apply_interpolation": true,
+        "completeness_threshold": 0.8
+    },
+
+    "io_config": {
+        "output_format": "csv"
+    }
+}}
