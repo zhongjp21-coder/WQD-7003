@@ -1,6 +1,6 @@
 {"malaysia":{
     "country": "malaysia",
-    "run_tag": "01021449",
+    "run_tag": null,
     "description": "Monthly precipitation calculation with administrative boundaries",
 
     "parameters": {
