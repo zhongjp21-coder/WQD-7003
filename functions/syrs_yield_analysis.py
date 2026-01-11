@@ -448,10 +448,10 @@ def _create_trend_comparison_plot(syrs_df, output_path):
     """
     if syrs_df.empty:
         return
+    example_states = ['Kedah', 'Kelantan', 'Selangor']
+    # example_states = sorted(syrs_df['state'].unique())[:6]
 
-    example_states = sorted(syrs_df['state'].unique())[:6]
-
-    fig, axes = plt.subplots(2, 3, figsize=(18, 12))
+    fig, axes = plt.subplots(1, 3, figsize=(18, 6))
     axes = axes.flatten()
 
     for idx, state in enumerate(example_states):
@@ -675,6 +675,7 @@ def run_complete_syrs_analysis(config):
     # Set default configuration
     # config = config or {}
 
+
     input_file = f'./datasets/{config["country"]}/rawdata/crops_state.xlsx'
     output_dir = f'./datasets/{config["country"]}/processed/{config["run_tag"]}/syrs_analysis'
     min_years = config.get('min_years', 3)
@@ -735,7 +736,7 @@ def run_complete_syrs_analysis(config):
         plt.figure(figsize=(14, 8))
 
         # 4. draw
-        for state in ["Kedah", "Perlis", "Selangor" ]:
+        for state in ["Kedah", "Kelantan", "Selangor" ]:
             state_df = df_clean[df_clean['state'] == state]
             plt.plot(state_df['year'], state_df['yield_ton_per_ha'],
                      marker='o', linewidth=2, markersize=6, label=state)

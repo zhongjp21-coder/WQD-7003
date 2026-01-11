@@ -441,7 +441,6 @@ def plot_drought_severity_heatmap(df_stats, severity='Extreme', save_dir=None):
         plt.savefig(save_path, dpi=300)
         print(f"✓ 热力图已保存: {save_path}")
 
-    plt.show()
 
 
 def plot_trend_heatmap(df_stats, save_dir=None):
@@ -510,7 +509,6 @@ def plot_trend_heatmap(df_stats, save_dir=None):
         plt.savefig(save_path, dpi=300)
         print(f"✓ 趋势热力图已保存: {save_path}")
 
-    plt.show()
 
 
 
@@ -586,5 +584,4 @@ def plot_temporal_heatmap(df_spi, timescale='SPI_3', save_dir=None):
         plt.savefig(save_path, dpi=300)
         print(f"✓ 优化版热力图已保存: {save_path}")
 
-    plt.show()
 

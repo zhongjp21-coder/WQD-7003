@@ -8,6 +8,9 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from pathlib import Path
+import matplotlib.colors as mcolors
+import matplotlib.cm as cm
+
 
 # Import utility functions
 from utils.data_io import load_processed_data, save_data_file
@@ -216,7 +219,7 @@ def perform_correlation_analysis(merged_data, spi_scale):
     print("=" * 80)
 
     correlation_results = []
-
+    print("==========*********sorted(merged_data['State'].unique()):",sorted(merged_data['State'].unique()))
     for state in sorted(merged_data['State'].unique()):
         state_data = merged_data[merged_data['State'] == state]
 
@@ -270,19 +273,9 @@ def perform_correlation_analysis(merged_data, spi_scale):
 
     return corr_df
 
-
 def generate_visualization_outputs(corr_df, merged_data, spi_scale, output_dir):
     """
-    Generate visualization outputs
-
-    Args:
-        corr_df: Correlation results DataFrame
-        merged_data: Merged SPI-SYRS data
-        spi_scale: SPI time scale
-        output_dir: Output directory path
-
-    Returns:
-        list: Paths to generated figures
+    Generate visualization outputs (Enhanced with graded color bars)
     """
     print("\n" + "=" * 80)
     print("Step 6: Generate Visualizations")
@@ -294,57 +287,174 @@ def generate_visualization_outputs(corr_df, merged_data, spi_scale, output_dir):
 
     generated_figures = []
 
-    # 1. Correlation bar chart
-    fig_path = os.path.join(figures_dir, f'{spi_scale}_correlation_bars.png')
+    # =================================================================================
+    # [NEW] 0. All States Scatter Grid (按州绘制 SPI-SYRS 关系散点图)
+    # =================================================================================
+    print("Generating all states scatter grid...")
+    fig_path = os.path.join(figures_dir, f'{spi_scale}_all_states_scatter_grid.png')
 
-    fig, axes = plt.subplots(2, 1, figsize=(14, 10))
+    # 获取所有州并排序
+    states = sorted(merged_data['State'].unique())
+    n_states = len(states)
 
-    # Pearson correlation bars
-    ax1 = axes[0]
-    colors = ['green' if r > 0 else 'red' for r in corr_df['Pearson_r']]
-    bars = ax1.bar(range(len(corr_df)), corr_df['Pearson_r'], color=colors, alpha=0.7)
+    # 动态计算网格布局 (每行4个)
+    n_cols = 4
+    n_rows = (n_states + n_cols - 1) // n_cols
 
-    # Add significance markers
-    for i, (_, row) in enumerate(corr_df.iterrows()):
-        if row['Pearson_sig'] != 'ns':
-            ax1.text(i, row['Pearson_r'], row['Pearson_sig'],
-                     ha='center', va='bottom' if row['Pearson_r'] > 0 else 'top',
-                     fontsize=10, fontweight='bold')
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=(5 * n_cols, 4 * n_rows))
+    axes = axes.flatten()  # 展平以便遍历
 
-    ax1.axhline(y=0, color='black', linestyle='-', linewidth=0.5)
-    ax1.set_xticks(range(len(corr_df)))
-    ax1.set_xticklabels(corr_df['State'], rotation=45, ha='right')
-    ax1.set_ylabel('Pearson r')
-    ax1.set_title(f'SPI-SYRS Pearson Correlation ({spi_scale})')
-    ax1.grid(True, alpha=0.3, axis='y')
+    for idx, state in enumerate(states):
+        ax = axes[idx]
+        state_data = merged_data[merged_data['State'] == state]
 
-    # Spearman correlation bars
-    ax2 = axes[1]
-    colors = ['green' if r > 0 else 'red' for r in corr_df['Spearman_r']]
-    ax2.bar(range(len(corr_df)), corr_df['Spearman_r'], color=colors, alpha=0.7)
+        # 获取该州的相关性信息 (用于标题和颜色)
+        state_corr = corr_df[corr_df['State'] == state].iloc[0]
+        r_val = state_corr['Pearson_r']
+        p_val = state_corr['Pearson_p']
+        is_sig = state_corr['Pearson_sig'] != 'ns'
 
-    # Add significance markers
-    for i, (_, row) in enumerate(corr_df.iterrows()):
-        if row['Spearman_sig'] != 'ns':
-            ax2.text(i, row['Spearman_r'], row['Spearman_sig'],
-                     ha='center', va='bottom' if row['Spearman_r'] > 0 else 'top',
-                     fontsize=10, fontweight='bold')
+        # 1. 绘制散点
+        ax.scatter(state_data['SPI_mean'], state_data['SYRS'],
+                   alpha=0.6, s=40, edgecolors='black', linewidth=0.5, color='skyblue')
 
-    ax2.axhline(y=0, color='black', linestyle='-', linewidth=0.5)
-    ax2.set_xticks(range(len(corr_df)))
-    ax2.set_xticklabels(corr_df['State'], rotation=45, ha='right')
-    ax2.set_ylabel('Spearman ρ')
-    ax2.set_title(f'SPI-SYRS Spearman Correlation ({spi_scale})')
-    ax2.grid(True, alpha=0.3, axis='y')
+        # 2. 绘制回归趋势线
+        if len(state_data) > 1:
+            # 线性拟合
+            z = np.polyfit(state_data['SPI_mean'], state_data['SYRS'], 1)
+            p = np.poly1d(z)
+            x_range = np.linspace(state_data['SPI_mean'].min(), state_data['SPI_mean'].max(), 100)
+
+            # 正相关用绿色线，负相关用红色线
+            line_color = 'green' if r_val > 0 else 'red'
+            # 显著的线画粗一点，实线；不显著的画虚线
+            line_style = '-' if is_sig else '--'
+            line_width = 2 if is_sig else 1
+
+            ax.plot(x_range, p(x_range), linestyle=line_style, color=line_color, linewidth=line_width, alpha=0.8)
+
+        # 3. 设置标题和标签
+        # 如果显著，标题加粗变色
+        title_color = 'black'
+        title_weight = 'normal'
+        if is_sig:
+            title_color = 'darkblue'
+            title_weight = 'bold'
+
+        ax.set_title(f"{state}\nr={r_val:.2f}, p={p_val:.3f}",
+                     fontsize=11, color=title_color, fontweight=title_weight)
+
+        ax.grid(True, alpha=0.3, linestyle='--')
+        ax.axhline(y=0, color='gray', linewidth=0.5)
+        ax.axvline(x=0, color='gray', linewidth=0.5)
+
+        # 只在最左侧和最底部的图显示轴标签，避免杂乱
+        if idx % n_cols == 0:
+            ax.set_ylabel('Yield Anomaly (SYRS)')
+        if idx >= (n_rows - 1) * n_cols:  # 简单判断最后一行
+            ax.set_xlabel(f'{spi_scale}')
+
+    # 隐藏多余的空子图
+    for i in range(n_states, len(axes)):
+        axes[i].axis('off')
 
     plt.tight_layout()
     plt.savefig(fig_path, dpi=300, bbox_inches='tight')
     plt.close()
 
-    print(f"✓ Generated correlation bar chart: {fig_path}")
+    print(f"✓ Generated all states scatter grid: {fig_path}")
     generated_figures.append(fig_path)
 
-    # 2. Scatter plots for significant states (top 6)
+    # --- 1. Correlation bar chart (Enhanced Color Mapping) ---
+    fig_path = os.path.join(figures_dir, f'{spi_scale}_correlation_bars.png')
+
+    fig, axes = plt.subplots(2, 1, figsize=(14, 11)) # 稍微增加高度以容纳 colorbar
+
+    # 设置色谱和归一化
+    # 使用 RdYlGn 色谱：红(负) -> 黄(零) -> 绿(正)
+    cmap = plt.get_cmap('RdYlGn')
+    # TwoSlopeNorm 确保 0 值精确对应色谱的中心点 (淡黄色/灰色)
+    # 范围设定为 -1 到 1，这是相关系数的理论范围
+    norm = mcolors.TwoSlopeNorm(vmin=-0.8, vcenter=0., vmax=0.8) # vmin/vmax 设置为0.8可以让极端颜色不要太深，或者设为1.0也可以
+
+    # --- Subplot 1: Pearson correlation bars ---
+    ax1 = axes[0]
+    r_values_pearson = corr_df['Pearson_r'].values
+    # 根据 r 值映射颜色
+    bar_colors_pearson = cmap(norm(r_values_pearson))
+
+    bars1 = ax1.bar(range(len(corr_df)), r_values_pearson, color=bar_colors_pearson,
+                    edgecolor='grey', linewidth=0.5, alpha=0.9)
+
+    # Add significance markers
+    for i, (_, row) in enumerate(corr_df.iterrows()):
+        if row['Pearson_sig'] != 'ns':
+            # 根据相关性方向决定星号标记的位置（在柱子上方还是下方）
+            va = 'bottom' if row['Pearson_r'] > 0 else 'top'
+            # 稍微增加一点偏移量，防止星号紧贴柱子
+            offset = 0.02 if row['Pearson_r'] > 0 else -0.02
+            ax1.text(i, row['Pearson_r'] + offset, row['Pearson_sig'],
+                     ha='center', va=va, fontsize=11, fontweight='bold', color='black')
+
+    ax1.axhline(y=0, color='black', linestyle='-', linewidth=0.8)
+    ax1.set_xticks(range(len(corr_df)))
+    ax1.set_xticklabels(corr_df['State'], rotation=45, ha='right')
+    ax1.set_ylabel('Pearson Correlation (r)', fontsize=12)
+    ax1.set_title(f'SPI-SYRS Pearson Correlation Magnitude ({spi_scale})', fontsize=14, fontweight='bold')
+    ax1.grid(True, alpha=0.3, axis='y')
+    # 设置 y 轴范围使图表更对称
+    ax1.set_ylim(-0.85, 0.85)
+
+    # --- Subplot 2: Spearman correlation bars ---
+    ax2 = axes[1]
+    r_values_spearman = corr_df['Spearman_r'].values
+    # 根据 r 值映射颜色
+    bar_colors_spearman = cmap(norm(r_values_spearman))
+
+    bars2 = ax2.bar(range(len(corr_df)), r_values_spearman, color=bar_colors_spearman,
+                    edgecolor='grey', linewidth=0.5, alpha=0.9)
+
+    # Add significance markers
+    for i, (_, row) in enumerate(corr_df.iterrows()):
+        if row['Spearman_sig'] != 'ns':
+            va = 'bottom' if row['Spearman_r'] > 0 else 'top'
+            offset = 0.02 if row['Spearman_r'] > 0 else -0.02
+            ax2.text(i, row['Spearman_r'] + offset, row['Spearman_sig'],
+                     ha='center', va=va, fontsize=11, fontweight='bold', color='black')
+
+    ax2.axhline(y=0, color='black', linestyle='-', linewidth=0.8)
+    ax2.set_xticks(range(len(corr_df)))
+    ax2.set_xticklabels(corr_df['State'], rotation=45, ha='right')
+    ax2.set_ylabel('Spearman Correlation (ρ)', fontsize=12)
+    ax2.set_title(f'SPI-SYRS Spearman Correlation Magnitude ({spi_scale})', fontsize=14, fontweight='bold')
+    ax2.grid(True, alpha=0.3, axis='y')
+    ax2.set_ylim(-0.85, 0.85)
+
+    # --- Add Global Colorbar (关键步骤) ---
+    # 创建一个 ScalarMappable 用于生成 colorbar
+    sm = cm.ScalarMappable(cmap=cmap, norm=norm)
+    sm.set_array([]) # 只需要空数组即可
+
+    # 将 colorbar 添加到 figure 右侧，对应两个子图的高度
+    cbar_ax = fig.add_axes([0.92, 0.15, 0.02, 0.7]) # [left, bottom, width, height]
+    cbar = fig.colorbar(sm, cax=cbar_ax, orientation='vertical')
+    cbar.set_label('Correlation Strength & Direction\n(Red=Negative, Green=Positive, Darker=Stronger)', fontsize=11)
+    # 设置 colorbar 的刻度
+    cbar.set_ticks([-0.8, -0.4, 0, 0.4, 0.8])
+    cbar.set_ticklabels(['Strong Neg', 'Weak Neg', 'Neutral', 'Weak Pos', 'Strong Pos'])
+
+    # 调整布局以适应 colorbar
+    plt.subplots_adjust(right=0.9, hspace=0.5)
+
+    # 保存图片
+    # 注意：不要使用 plt.tight_layout()，因为它可能会破坏手动设置的 colorbar 位置
+    plt.savefig(fig_path, dpi=300, bbox_inches='tight')
+    plt.close()
+
+    print(f"✓ Generated enhanced correlation bar chart: {fig_path}")
+    generated_figures.append(fig_path)
+
+    # --- 2. Scatter plots for significant states (保持不变) ---
     sig_states = corr_df[corr_df['Pearson_sig'] != 'ns'].head(6)
 
     if len(sig_states) > 0:
@@ -356,7 +466,6 @@ def generate_visualization_outputs(corr_df, merged_data, spi_scale, output_dir):
 
         fig, axes = plt.subplots(n_rows, n_cols, figsize=(6 * n_cols, 5 * n_rows))
 
-        # Flatten axes array for easy iteration
         if n_plots == 1:
             axes = np.array([axes])
         axes = axes.flatten()
@@ -366,25 +475,29 @@ def generate_visualization_outputs(corr_df, merged_data, spi_scale, output_dir):
             state_data = merged_data[merged_data['State'] == state]
 
             ax = axes[idx]
+            # 根据相关性正负设置散点颜色基调，增加一点透明度
+            point_color = 'green' if state_row['Pearson_r'] > 0 else 'red'
+
             ax.scatter(state_data['SPI_mean'], state_data['SYRS'],
-                       s=100, alpha=0.6, edgecolors='black', linewidths=1)
+                       s=100, alpha=0.5, color=point_color, edgecolors='black', linewidths=0.5)
 
             # Add trend line
             z = np.polyfit(state_data['SPI_mean'], state_data['SYRS'], 1)
             p = np.poly1d(z)
             x_line = np.linspace(state_data['SPI_mean'].min(), state_data['SPI_mean'].max(), 100)
-            ax.plot(x_line, p(x_line), 'r--', linewidth=2, alpha=0.8)
+            # 趋势线颜色加深
+            line_color = 'darkgreen' if state_row['Pearson_r'] > 0 else 'darkred'
+            ax.plot(x_line, p(x_line), linestyle='--', linewidth=2.5, color=line_color, alpha=0.8)
 
-            # Add correlation info
-            ax.set_xlabel(f'{spi_scale} (Growing Season)')
-            ax.set_ylabel('SYRS')
+            ax.set_xlabel(f'{spi_scale} (Growing Season)', fontsize=11)
+            ax.set_ylabel('SYRS (Yield Anomaly)', fontsize=11)
             ax.set_title(
-                f'{state}\nr={state_row["Pearson_r"]:.3f}, p={state_row["Pearson_p"]:.4f} {state_row["Pearson_sig"]}')
+                f'{state}\nr={state_row["Pearson_r"]:.3f}, p={state_row["Pearson_p"]:.4f} {state_row["Pearson_sig"]}',
+                fontsize=12, fontweight='bold')
             ax.grid(True, alpha=0.3)
-            ax.axhline(y=0, color='gray', linestyle='--', linewidth=0.5)
-            ax.axvline(x=0, color='gray', linestyle='--', linewidth=0.5)
+            ax.axhline(y=0, color='gray', linestyle='-', linewidth=0.8)
+            ax.axvline(x=0, color='gray', linestyle='-', linewidth=0.8)
 
-        # Hide unused subplots
         for idx in range(len(sig_states), len(axes)):
             axes[idx].axis('off')
 
@@ -396,6 +509,138 @@ def generate_visualization_outputs(corr_df, merged_data, spi_scale, output_dir):
         generated_figures.append(fig_path)
 
     return generated_figures
+# def generate_visualization_outputs(corr_df, merged_data, spi_scale, output_dir):
+#     """
+#     Generate visualization outputs
+#
+#     Args:
+#         corr_df: Correlation results DataFrame
+#         merged_data: Merged SPI-SYRS data
+#         spi_scale: SPI time scale
+#         output_dir: Output directory path
+#
+#     Returns:
+#         list: Paths to generated figures
+#     """
+#     print("\n" + "=" * 80)
+#     print("Step 6: Generate Visualizations")
+#     print("=" * 80)
+#
+#     # Create output directory if it doesn't exist
+#     figures_dir = os.path.join(output_dir, 'figures')
+#     os.makedirs(figures_dir, exist_ok=True)
+#
+#     generated_figures = []
+#
+#     # 1. Correlation bar chart
+#     fig_path = os.path.join(figures_dir, f'{spi_scale}_correlation_bars.png')
+#
+#     fig, axes = plt.subplots(2, 1, figsize=(14, 10))
+#
+#     # 设置色谱和归一化
+#     # 使用 RdYlGn 色谱：红(负) -> 黄(零) -> 绿(正)
+#     cmap = plt.get_cmap('RdYlGn')
+#     # TwoSlopeNorm 确保 0 值精确对应色谱的中心点 (淡黄色/灰色)
+#     # 范围设定为 -1 到 1，这是相关系数的理论范围
+#     norm = mcolors.TwoSlopeNorm(vmin=-0.8, vcenter=0., vmax=0.8)  # vmin/vmax 设置为0.8可以让极端颜色不要太深，或者设为1.0也可以
+#
+#     # Pearson correlation bars
+#     ax1 = axes[0]
+#     colors = ['green' if r > 0 else 'red' for r in corr_df['Pearson_r']]
+#     bars = ax1.bar(range(len(corr_df)), corr_df['Pearson_r'], color=colors, alpha=0.7)
+#
+#     # Add significance markers
+#     for i, (_, row) in enumerate(corr_df.iterrows()):
+#         if row['Pearson_sig'] != 'ns':
+#             ax1.text(i, row['Pearson_r'], row['Pearson_sig'],
+#                      ha='center', va='bottom' if row['Pearson_r'] > 0 else 'top',
+#                      fontsize=10, fontweight='bold')
+#
+#     ax1.axhline(y=0, color='black', linestyle='-', linewidth=0.5)
+#     ax1.set_xticks(range(len(corr_df)))
+#     ax1.set_xticklabels(corr_df['State'], rotation=45, ha='right')
+#     ax1.set_ylabel('Pearson r')
+#     ax1.set_title(f'SPI-SYRS Pearson Correlation ({spi_scale})')
+#     ax1.grid(True, alpha=0.3, axis='y')
+#
+#     # Spearman correlation bars
+#     ax2 = axes[1]
+#     colors = ['green' if r > 0 else 'red' for r in corr_df['Spearman_r']]
+#     ax2.bar(range(len(corr_df)), corr_df['Spearman_r'], color=colors, alpha=0.7)
+#
+#     # Add significance markers
+#     for i, (_, row) in enumerate(corr_df.iterrows()):
+#         if row['Spearman_sig'] != 'ns':
+#             ax2.text(i, row['Spearman_r'], row['Spearman_sig'],
+#                      ha='center', va='bottom' if row['Spearman_r'] > 0 else 'top',
+#                      fontsize=10, fontweight='bold')
+#
+#     ax2.axhline(y=0, color='black', linestyle='-', linewidth=0.5)
+#     ax2.set_xticks(range(len(corr_df)))
+#     ax2.set_xticklabels(corr_df['State'], rotation=45, ha='right')
+#     ax2.set_ylabel('Spearman ρ')
+#     ax2.set_title(f'SPI-SYRS Spearman Correlation ({spi_scale})')
+#     ax2.grid(True, alpha=0.3, axis='y')
+#
+#     plt.tight_layout()
+#     plt.savefig(fig_path, dpi=300, bbox_inches='tight')
+#     plt.close()
+#
+#     print(f"✓ Generated correlation bar chart: {fig_path}")
+#     generated_figures.append(fig_path)
+#
+#     # 2. Scatter plots for significant states (top 6)
+#     sig_states = corr_df[corr_df['Pearson_sig'] != 'ns'].head(6)
+#
+#     if len(sig_states) > 0:
+#         fig_path = os.path.join(figures_dir, f'{spi_scale}_significant_states_scatter.png')
+#
+#         n_plots = len(sig_states)
+#         n_cols = min(3, n_plots)
+#         n_rows = (n_plots + n_cols - 1) // n_cols
+#
+#         fig, axes = plt.subplots(n_rows, n_cols, figsize=(6 * n_cols, 5 * n_rows))
+#
+#         # Flatten axes array for easy iteration
+#         if n_plots == 1:
+#             axes = np.array([axes])
+#         axes = axes.flatten()
+#
+#         for idx, (_, state_row) in enumerate(sig_states.iterrows()):
+#             state = state_row['State']
+#             state_data = merged_data[merged_data['State'] == state]
+#
+#             ax = axes[idx]
+#             ax.scatter(state_data['SPI_mean'], state_data['SYRS'],
+#                        s=100, alpha=0.6, edgecolors='black', linewidths=1)
+#
+#             # Add trend line
+#             z = np.polyfit(state_data['SPI_mean'], state_data['SYRS'], 1)
+#             p = np.poly1d(z)
+#             x_line = np.linspace(state_data['SPI_mean'].min(), state_data['SPI_mean'].max(), 100)
+#             ax.plot(x_line, p(x_line), 'r--', linewidth=2, alpha=0.8)
+#
+#             # Add correlation info
+#             ax.set_xlabel(f'{spi_scale} (Growing Season)')
+#             ax.set_ylabel('SYRS')
+#             ax.set_title(
+#                 f'{state}\nr={state_row["Pearson_r"]:.3f}, p={state_row["Pearson_p"]:.4f} {state_row["Pearson_sig"]}')
+#             ax.grid(True, alpha=0.3)
+#             ax.axhline(y=0, color='gray', linestyle='--', linewidth=0.5)
+#             ax.axvline(x=0, color='gray', linestyle='--', linewidth=0.5)
+#
+#         # Hide unused subplots
+#         for idx in range(len(sig_states), len(axes)):
+#             axes[idx].axis('off')
+#
+#         plt.tight_layout()
+#         plt.savefig(fig_path, dpi=300, bbox_inches='tight')
+#         plt.close()
+#
+#         print(f"✓ Generated scatter plots: {fig_path}")
+#         generated_figures.append(fig_path)
+#
+#     return generated_figures
 
 
 def export_analysis_results(corr_df, merged_data, spi_scale, output_dir, summary_stats):
