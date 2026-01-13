@@ -216,8 +216,6 @@ def run_monthly_boundary_spi(config: dict):
     print("=" * 60)
 
     # Statistics for each state
-    print("df_spi", df_spi)
-    print(df_spi.columns)
     state_summary = df_spi.groupby('region').agg(
         valid_grid=('grid_id', 'nunique'),
         total_value=('monthly_precip', 'count')
