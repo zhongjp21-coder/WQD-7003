@@ -484,12 +484,12 @@ def plot_trend_heatmap(df_stats, save_dir=None):
 
             if is_significant:
                 # Draw a star slightly above the cell center
-                plt.text(x + 0.5, y + 0.3, '★',
+                plt.text(x + 0.5, y + 0.3, '*',
                          horizontalalignment='center',
                          verticalalignment='center',
                          color='black', fontsize=14, weight='bold')
 
-    plt.title('Short-term SPI Trends (2017-2022)\n(★ indicates statistical significance p<0.05)', fontsize=14)
+    plt.title('Short-term SPI Trends (2017-2022)\n(* indicates statistical significance p<0.05)', fontsize=14)
     plt.ylabel('Region', fontsize=12)
     plt.tight_layout()
 
