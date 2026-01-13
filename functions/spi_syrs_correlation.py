@@ -288,53 +288,53 @@ def generate_visualization_outputs(corr_df, merged_data, spi_scale, output_dir):
     generated_figures = []
 
     # =================================================================================
-    # [NEW] 0. All States Scatter Grid (按州绘制 SPI-SYRS 关系散点图)
+    # [NEW] 0. All States Scatter Grid (Plot SPI-SYRS relationship scatter plots by state)
     # =================================================================================
     print("Generating all states scatter grid...")
     fig_path = os.path.join(figures_dir, f'{spi_scale}_all_states_scatter_grid.png')
 
-    # 获取所有州并排序
+    # Get all states and sort
     states = sorted(merged_data['State'].unique())
     n_states = len(states)
 
-    # 动态计算网格布局 (每行4个)
+    # Dynamically compute grid layout (4 per row)
     n_cols = 4
     n_rows = (n_states + n_cols - 1) // n_cols
 
     fig, axes = plt.subplots(n_rows, n_cols, figsize=(5 * n_cols, 4 * n_rows))
-    axes = axes.flatten()  # 展平以便遍历
+    axes = axes.flatten()  # Flatten for iteration
 
     for idx, state in enumerate(states):
         ax = axes[idx]
         state_data = merged_data[merged_data['State'] == state]
 
-        # 获取该州的相关性信息 (用于标题和颜色)
+        # Get correlation info for this state (for title and color)
         state_corr = corr_df[corr_df['State'] == state].iloc[0]
         r_val = state_corr['Pearson_r']
         p_val = state_corr['Pearson_p']
         is_sig = state_corr['Pearson_sig'] != 'ns'
 
-        # 1. 绘制散点
+        # 1. Plot scatter points
         ax.scatter(state_data['SPI_mean'], state_data['SYRS'],
                    alpha=0.6, s=40, edgecolors='black', linewidth=0.5, color='skyblue')
 
-        # 2. 绘制回归趋势线
+        # 2. Plot regression trend line
         if len(state_data) > 1:
-            # 线性拟合
+            # Linear fit
             z = np.polyfit(state_data['SPI_mean'], state_data['SYRS'], 1)
             p = np.poly1d(z)
             x_range = np.linspace(state_data['SPI_mean'].min(), state_data['SPI_mean'].max(), 100)
 
-            # 正相关用绿色线，负相关用红色线
+            # Use green line for positive correlation, red for negative
             line_color = 'green' if r_val > 0 else 'red'
-            # 显著的线画粗一点，实线；不显著的画虚线
+            # Significant lines: thicker and solid; non-significant: dashed
             line_style = '-' if is_sig else '--'
             line_width = 2 if is_sig else 1
 
             ax.plot(x_range, p(x_range), linestyle=line_style, color=line_color, linewidth=line_width, alpha=0.8)
 
-        # 3. 设置标题和标签
-        # 如果显著，标题加粗变色
+        # 3. Set title and labels
+        # If significant, make title bold and change color
         title_color = 'black'
         title_weight = 'normal'
         if is_sig:
@@ -348,13 +348,13 @@ def generate_visualization_outputs(corr_df, merged_data, spi_scale, output_dir):
         ax.axhline(y=0, color='gray', linewidth=0.5)
         ax.axvline(x=0, color='gray', linewidth=0.5)
 
-        # 只在最左侧和最底部的图显示轴标签，避免杂乱
+        # Show axis labels only on the leftmost column and bottom row to avoid clutter
         if idx % n_cols == 0:
             ax.set_ylabel('Yield Anomaly (SYRS)')
-        if idx >= (n_rows - 1) * n_cols:  # 简单判断最后一行
+        if idx >= (n_rows - 1) * n_cols:  # Simple check for the last row
             ax.set_xlabel(f'{spi_scale}')
 
-    # 隐藏多余的空子图
+    # Hide extra empty subplots
     for i in range(n_states, len(axes)):
         axes[i].axis('off')
 
@@ -368,19 +368,19 @@ def generate_visualization_outputs(corr_df, merged_data, spi_scale, output_dir):
     # --- 1. Correlation bar chart (Enhanced Color Mapping) ---
     fig_path = os.path.join(figures_dir, f'{spi_scale}_correlation_bars.png')
 
-    fig, axes = plt.subplots(2, 1, figsize=(14, 11)) # 稍微增加高度以容纳 colorbar
+    fig, axes = plt.subplots(2, 1, figsize=(14, 11)) # Slightly increase height to accommodate the colorbar
 
-    # 设置色谱和归一化
-    # 使用 RdYlGn 色谱：红(负) -> 黄(零) -> 绿(正)
+    # Set colormap and normalization
+    # Use RdYlGn colormap: Red (negative) -> Yellow (zero) -> Green (positive)
     cmap = plt.get_cmap('RdYlGn')
-    # TwoSlopeNorm 确保 0 值精确对应色谱的中心点 (淡黄色/灰色)
-    # 范围设定为 -1 到 1，这是相关系数的理论范围
-    norm = mcolors.TwoSlopeNorm(vmin=-0.8, vcenter=0., vmax=0.8) # vmin/vmax 设置为0.8可以让极端颜色不要太深，或者设为1.0也可以
+    # TwoSlopeNorm ensures 0 value corresponds to the center of the colormap (light yellow/gray)
+    # Range set to -1 to 1, which is the theoretical range of correlation coefficients
+    norm = mcolors.TwoSlopeNorm(vmin=-0.8, vcenter=0., vmax=0.8) # Setting vmin/vmax to 0.8 makes extremes less dark; 1.0 also works
 
     # --- Subplot 1: Pearson correlation bars ---
     ax1 = axes[0]
     r_values_pearson = corr_df['Pearson_r'].values
-    # 根据 r 值映射颜色
+    # Map colors according to r values
     bar_colors_pearson = cmap(norm(r_values_pearson))
 
     bars1 = ax1.bar(range(len(corr_df)), r_values_pearson, color=bar_colors_pearson,
@@ -389,9 +389,9 @@ def generate_visualization_outputs(corr_df, merged_data, spi_scale, output_dir):
     # Add significance markers
     for i, (_, row) in enumerate(corr_df.iterrows()):
         if row['Pearson_sig'] != 'ns':
-            # 根据相关性方向决定星号标记的位置（在柱子上方还是下方）
+            # Decide the position of the star based on correlation direction (above or below the bar)
             va = 'bottom' if row['Pearson_r'] > 0 else 'top'
-            # 稍微增加一点偏移量，防止星号紧贴柱子
+            # Add a small offset to prevent the star from sticking to the bar
             offset = 0.02 if row['Pearson_r'] > 0 else -0.02
             ax1.text(i, row['Pearson_r'] + offset, row['Pearson_sig'],
                      ha='center', va=va, fontsize=11, fontweight='bold', color='black')
@@ -402,13 +402,13 @@ def generate_visualization_outputs(corr_df, merged_data, spi_scale, output_dir):
     ax1.set_ylabel('Pearson Correlation (r)', fontsize=12)
     ax1.set_title(f'SPI-SYRS Pearson Correlation Magnitude ({spi_scale})', fontsize=14, fontweight='bold')
     ax1.grid(True, alpha=0.3, axis='y')
-    # 设置 y 轴范围使图表更对称
+    # Set y-axis range to make the chart more symmetric
     ax1.set_ylim(-0.85, 0.85)
 
     # --- Subplot 2: Spearman correlation bars ---
     ax2 = axes[1]
     r_values_spearman = corr_df['Spearman_r'].values
-    # 根据 r 值映射颜色
+    # Map colors according to r values
     bar_colors_spearman = cmap(norm(r_values_spearman))
 
     bars2 = ax2.bar(range(len(corr_df)), r_values_spearman, color=bar_colors_spearman,
@@ -430,31 +430,31 @@ def generate_visualization_outputs(corr_df, merged_data, spi_scale, output_dir):
     ax2.grid(True, alpha=0.3, axis='y')
     ax2.set_ylim(-0.85, 0.85)
 
-    # --- Add Global Colorbar (关键步骤) ---
-    # 创建一个 ScalarMappable 用于生成 colorbar
+    # --- Add Global Colorbar (Key step) ---
+    # Create a ScalarMappable to generate the colorbar
     sm = cm.ScalarMappable(cmap=cmap, norm=norm)
-    sm.set_array([]) # 只需要空数组即可
+    sm.set_array([]) # An empty array is sufficient
 
-    # 将 colorbar 添加到 figure 右侧，对应两个子图的高度
+    # Add the colorbar to the right side of the figure, matching the height of the two subplots
     cbar_ax = fig.add_axes([0.92, 0.15, 0.02, 0.7]) # [left, bottom, width, height]
     cbar = fig.colorbar(sm, cax=cbar_ax, orientation='vertical')
     cbar.set_label('Correlation Strength & Direction\n(Red=Negative, Green=Positive, Darker=Stronger)', fontsize=11)
-    # 设置 colorbar 的刻度
+    # Set ticks on the colorbar
     cbar.set_ticks([-0.8, -0.4, 0, 0.4, 0.8])
     cbar.set_ticklabels(['Strong Neg', 'Weak Neg', 'Neutral', 'Weak Pos', 'Strong Pos'])
 
-    # 调整布局以适应 colorbar
+    # Adjust layout to accommodate the colorbar
     plt.subplots_adjust(right=0.9, hspace=0.5)
 
-    # 保存图片
-    # 注意：不要使用 plt.tight_layout()，因为它可能会破坏手动设置的 colorbar 位置
+    # Save image
+    # Note: Do not use plt.tight_layout() because it may disrupt the manually set colorbar position
     plt.savefig(fig_path, dpi=300, bbox_inches='tight')
     plt.close()
 
     print(f"✓ Generated enhanced correlation bar chart: {fig_path}")
     generated_figures.append(fig_path)
 
-    # --- 2. Scatter plots for significant states (保持不变) ---
+    # --- 2. Scatter plots for significant states (keep unchanged) ---
     sig_states = corr_df[corr_df['Pearson_sig'] != 'ns'].head(6)
 
     if len(sig_states) > 0:
@@ -475,7 +475,7 @@ def generate_visualization_outputs(corr_df, merged_data, spi_scale, output_dir):
             state_data = merged_data[merged_data['State'] == state]
 
             ax = axes[idx]
-            # 根据相关性正负设置散点颜色基调，增加一点透明度
+            # Set base scatter color according to correlation sign; add some transparency
             point_color = 'green' if state_row['Pearson_r'] > 0 else 'red'
 
             ax.scatter(state_data['SPI_mean'], state_data['SYRS'],
@@ -485,7 +485,7 @@ def generate_visualization_outputs(corr_df, merged_data, spi_scale, output_dir):
             z = np.polyfit(state_data['SPI_mean'], state_data['SYRS'], 1)
             p = np.poly1d(z)
             x_line = np.linspace(state_data['SPI_mean'].min(), state_data['SPI_mean'].max(), 100)
-            # 趋势线颜色加深
+            # Darken the trend line color
             line_color = 'darkgreen' if state_row['Pearson_r'] > 0 else 'darkred'
             ax.plot(x_line, p(x_line), linestyle='--', linewidth=2.5, color=line_color, alpha=0.8)
 
@@ -537,12 +537,12 @@ def generate_visualization_outputs(corr_df, merged_data, spi_scale, output_dir):
 #
 #     fig, axes = plt.subplots(2, 1, figsize=(14, 10))
 #
-#     # 设置色谱和归一化
-#     # 使用 RdYlGn 色谱：红(负) -> 黄(零) -> 绿(正)
+#     # Set colormap and normalization
+#     # Use RdYlGn colormap: Red (negative) -> Yellow (zero) -> Green (positive)
 #     cmap = plt.get_cmap('RdYlGn')
-#     # TwoSlopeNorm 确保 0 值精确对应色谱的中心点 (淡黄色/灰色)
-#     # 范围设定为 -1 到 1，这是相关系数的理论范围
-#     norm = mcolors.TwoSlopeNorm(vmin=-0.8, vcenter=0., vmax=0.8)  # vmin/vmax 设置为0.8可以让极端颜色不要太深，或者设为1.0也可以
+#     # TwoSlopeNorm ensures 0 value corresponds to the center of the colormap (light yellow/gray)
+#     # Range set to -1 to 1, which is the theoretical range of correlation coefficients
+#     norm = mcolors.TwoSlopeNorm(vmin=-0.8, vcenter=0., vmax=0.8)  # Setting vmin/vmax to 0.8 makes extremes less dark; 1.0 also works
 #
 #     # Pearson correlation bars
 #     ax1 = axes[0]
